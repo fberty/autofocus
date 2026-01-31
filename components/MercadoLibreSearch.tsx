@@ -189,6 +189,8 @@ export default function MercadoLibreSearch({ onSelectItem, onClose }: MercadoLib
                       {(() => {
                         const yearAttr = item.attributes?.find(a => a.id === 'VEHICLE_YEAR');
                         const kmAttr = item.attributes?.find(a => a.id === 'KILOMETERS');
+                        const kmValue = kmAttr?.value_name ? parseInt(kmAttr.value_name) : null;
+                        
                         return (
                           <>
                             {yearAttr && yearAttr.value_name && (
@@ -196,13 +198,13 @@ export default function MercadoLibreSearch({ onSelectItem, onClose }: MercadoLib
                                 📅 {yearAttr.value_name}
                               </p>
                             )}
-                            {kmAttr && kmAttr.value_name && parseInt(kmAttr.value_name) > 0 && (
+                            {kmValue !== null && (
                               <p className="text-xs text-gray-600 dark:text-gray-400">
-                                📊 {formatNumber(parseInt(kmAttr.value_name))} km
+                                📊 {kmValue === 0 ? '0 km' : `${formatNumber(kmValue)} km`}
                               </p>
                             )}
                             <p className="text-xs text-gray-600 dark:text-gray-400">
-                              🏷️ {item.condition === 'new' ? '0 km' : 'Usado'}
+                              🏷️ {item.condition === 'new' ? '0 km (Nuevo)' : 'Usado'}
                             </p>
                           </>
                         );

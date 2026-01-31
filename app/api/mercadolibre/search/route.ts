@@ -25,9 +25,27 @@ function extractSearchResults(html: string): SearchResult[] {
   const seenIds = new Set<string>();
   
   try {
+    // Extract texts arrays (year, km) in order - format: "texts":["2025","0 Km"]
+    const textsRegex = /"texts":\["([^"]+)","([^"]+)"\]/g;
+    const textsData: Array<{year: string, km: string}> = [];
+    let textsMatch;
+    while ((textsMatch = textsRegex.exec(html)) !== null) {
+      const yearOrKm1 = textsMatch[1];
+      const yearOrKm2 = textsMatch[2];
+      // Year is 4 digits, km contains "Km"
+      if (/^\d{4}$/.test(yearOrKm1) && yearOrKm2.includes('Km')) {
+        textsData.push({
+          year: yearOrKm1,
+          km: yearOrKm2.replace(/[^\d]/g, '') // Extract just numbers
+        });
+      }
+    }
+    
     // Extract each card from the search results
     const cardPattern = /<div[^>]*class="[^"]*poly-card[^"]*"[^>]*>[\s\S]*?<\/li>/gi;
     const cards = html.match(cardPattern) || [];
+    
+    let textsIndex = 0;
     
     for (const card of cards) {
       // Extract ID from href
@@ -67,24 +85,18 @@ function extractSearchResults(html: string): SearchResult[] {
       const imgMatch = card.match(/src="(https:\/\/http2\.mlstatic\.com[^"]+)"/i);
       const thumbnail = imgMatch ? imgMatch[1] : '';
       
-      // Extract year and km from card content
+      // Get year and km from pre-extracted texts data (matched by position)
       let year = '';
       let km = '';
       let condition = 'used';
       
-      // Year is a 4-digit number in a list item
-      const yearMatch = card.match(/separator">(\d{4})<\/li>/i) || 
-                       card.match(/>(\d{4})<\/li>/i);
-      if (yearMatch) year = yearMatch[1];
-      
-      // Km pattern - look for number followed by Km
-      const kmMatch = card.match(/>([\d.]+)\s*Km<\/li>/i) ||
-                     card.match(/separator">([\d.]+)\s*Km/i);
-      if (kmMatch) {
-        km = kmMatch[1].replace(/\./g, '');
-        if (kmMatch[0].includes('0 Km') || km === '0') {
+      if (textsIndex < textsData.length) {
+        year = textsData[textsIndex].year;
+        km = textsData[textsIndex].km;
+        if (km === '0') {
           condition = 'new';
         }
+        textsIndex++;
       }
       
       // Extract location

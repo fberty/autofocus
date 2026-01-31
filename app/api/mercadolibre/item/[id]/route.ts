@@ -84,6 +84,13 @@ function extractDataFromHTML(html: string, itemId: string) {
       brand = brandMatch[1];
     }
 
+    // Extract model by removing brand from title
+    let model = title;
+    if (brand) {
+      // Remove brand from beginning of title to get model
+      model = title.replace(new RegExp(`^${brand}\\s+`, 'i'), '').trim();
+    }
+
     // Try to get seller from HTML
     const sellerMatch = html.match(/Concesionario\s+([^•<]+)/i) || 
                        html.match(/"nickname":"([^"]+)"/i);
@@ -108,7 +115,7 @@ function extractDataFromHTML(html: string, itemId: string) {
       },
       attributes: [
         { id: 'BRAND', name: 'Marca', value_name: brand },
-        { id: 'MODEL', name: 'Modelo', value_name: title },
+        { id: 'MODEL', name: 'Modelo', value_name: model },
         { id: 'VEHICLE_YEAR', name: 'Año', value_name: year > 0 ? year.toString() : '' },
         { id: 'KILOMETERS', name: 'Kilómetros', value_name: km > 0 ? km.toString() : '' },
       ],

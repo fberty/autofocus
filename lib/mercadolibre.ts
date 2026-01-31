@@ -100,8 +100,23 @@ export const mercadolibre = {
       return attr?.value_name || null;
     };
 
-    const marca = findAttribute('BRAND') || '';
-    const modelo = findAttribute('MODEL') || '';
+    let marca = findAttribute('BRAND') || '';
+    let modelo = findAttribute('MODEL') || '';
+    
+    // If model is empty or same as title, try to extract brand and model from title
+    if (!modelo || modelo === item.title) {
+      const brandPatterns = /\b(Honda|Toyota|Ford|Chevrolet|Volkswagen|VW|Fiat|Renault|Peugeot|Citroën|Citroen|Nissan|Hyundai|Kia|Mercedes[- ]?Benz|Mercedes|BMW|Audi|Jeep|RAM|Dodge|Mitsubishi|Mazda|Subaru|Suzuki|Alfa Romeo|Chery|Geely|JAC|BYD|Great Wall|Haval)\b/i;
+      const brandMatch = item.title.match(brandPatterns);
+      
+      if (brandMatch) {
+        if (!marca) marca = brandMatch[1];
+        // Extract model by removing brand from title
+        modelo = item.title.replace(new RegExp(`^${brandMatch[1]}\\s+`, 'i'), '').trim();
+      } else {
+        modelo = item.title;
+      }
+    }
+    
     const añoStr = findAttribute('VEHICLE_YEAR');
     const año = añoStr ? parseInt(añoStr) : new Date().getFullYear();
     const kilometrajeStr = findAttribute('KILOMETERS');
@@ -126,7 +141,7 @@ export const mercadolibre = {
 
     return {
       marca,
-      modelo: modelo || item.title,
+      modelo,
       año,
       kilometraje,
       precio: item.price,
