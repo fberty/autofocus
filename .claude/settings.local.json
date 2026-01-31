@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/populate-vehicles.js:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(xargs kill:*)"
+    ]
+  }
+}
