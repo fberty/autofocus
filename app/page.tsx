@@ -14,6 +14,7 @@ import DarkModeToggle from '@/components/DarkModeToggle';
 import MercadoLibreSearch from '@/components/MercadoLibreSearch';
 import MercadoLibreUrlInput from '@/components/MercadoLibreUrlInput';
 import UserMenu from '@/components/UserMenu';
+import Logo from '@/components/Logo';
 import { Plus, Search, Link2, ChevronDown, Loader2, Upload } from 'lucide-react';
 
 const STORAGE_KEY = 'autofocus_vehicles';
@@ -240,9 +241,12 @@ export default function Home() {
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">AutoFocus</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 transition-colors">Análisis de Mercado Automotor</p>
+            <div className="flex items-center gap-3">
+              <Logo size={36} className="text-blue-600 dark:text-blue-400" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Motorlytics</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 transition-colors">Análisis de Mercado Automotor</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <DarkModeToggle />

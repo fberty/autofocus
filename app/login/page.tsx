@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,8 +78,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4 transition-colors">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">AutoFocus</h1>
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Logo size={48} className="text-blue-600 dark:text-blue-400 mb-3" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Motorlytics</h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Análisis de Mercado Automotor</p>
         </div>
 
