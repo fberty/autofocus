@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Vehicle, FilterState, SortField, SortDirection } from '@/types';
-import { storage } from '@/lib/storage';
 import { mercadolibre, MLSearchResult } from '@/lib/mercadolibre';
+import { useVehicles, useAddVehicle, useUpdateVehicle, useDeleteVehicle, useMigrateVehicles } from '@/lib/hooks/useVehicles';
 import FilterBar from '@/components/FilterBar';
 import VehicleTable from '@/components/VehicleTable';
 import VehicleModal from '@/components/VehicleModal';
@@ -11,10 +13,22 @@ import PriceHistoryModal from '@/components/PriceHistoryModal';
 import DarkModeToggle from '@/components/DarkModeToggle';
 import MercadoLibreSearch from '@/components/MercadoLibreSearch';
 import MercadoLibreUrlInput from '@/components/MercadoLibreUrlInput';
-import { Plus, Search, Link2, ChevronDown } from 'lucide-react';
+import UserMenu from '@/components/UserMenu';
+import Logo from '@/components/Logo';
+import { Plus, Search, Link2, ChevronDown, Loader2, Upload } from 'lucide-react';
+
+const STORAGE_KEY = 'autofocus_vehicles';
+const MIGRATED_KEY = 'autofocus_migrated';
 
 export default function Home() {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { data: vehicles = [], isLoading } = useVehicles();
+  const addVehicle = useAddVehicle();
+  const updateVehicle = useUpdateVehicle();
+  const deleteVehicle = useDeleteVehicle();
+  const migrateVehicles = useMigrateVehicles();
+
   const [filters, setFilters] = useState<FilterState>({
     marca: '',
     modelo: '',
@@ -37,10 +51,53 @@ export default function Home() {
   const [mlInitialData, setMlInitialData] = useState<Partial<Vehicle> | undefined>(undefined);
   const [historyVehicle, setHistoryVehicle] = useState<Vehicle | null>(null);
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showMigrationBanner, setShowMigrationBanner] = useState(false);
+  const [localVehicles, setLocalVehicles] = useState<Vehicle[]>([]);
 
+  // Redirect to login if not authenticated
   useEffect(() => {
-    setVehicles(storage.getVehicles());
-  }, []);
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  // Check for localStorage data to migrate
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (typeof window === 'undefined') return;
+
+    const alreadyMigrated = localStorage.getItem(MIGRATED_KEY);
+    if (alreadyMigrated) return;
+
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setLocalVehicles(parsed);
+          setShowMigrationBanner(true);
+        }
+      }
+    } catch {
+      // No local data to migrate
+    }
+  }, [status]);
+
+  const handleMigrate = async () => {
+    try {
+      await migrateVehicles.mutateAsync(localVehicles);
+      localStorage.setItem(MIGRATED_KEY, 'true');
+      setShowMigrationBanner(false);
+      setLocalVehicles([]);
+    } catch (error) {
+      console.error('Migration failed:', error);
+    }
+  };
+
+  const handleDismissMigration = () => {
+    localStorage.setItem(MIGRATED_KEY, 'true');
+    setShowMigrationBanner(false);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -107,8 +164,7 @@ export default function Home() {
   };
 
   const handleAddVehicle = (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt' | 'priceHistory'>) => {
-    storage.addVehicle(vehicleData);
-    setVehicles(storage.getVehicles());
+    addVehicle.mutate(vehicleData);
     setShowAddModal(false);
     setMlInitialData(undefined);
   };
@@ -128,32 +184,73 @@ export default function Home() {
 
   const handleEditVehicle = (vehicleData: Omit<Vehicle, 'id' | 'createdAt' | 'updatedAt' | 'priceHistory'>) => {
     if (editingVehicle) {
-      storage.updateVehicle(editingVehicle.id, vehicleData);
-      setVehicles(storage.getVehicles());
+      updateVehicle.mutate({ id: editingVehicle.id, data: vehicleData });
       setEditingVehicle(null);
     }
   };
 
   const handleDeleteVehicle = (id: string) => {
-    storage.deleteVehicle(id);
-    setVehicles(storage.getVehicles());
+    deleteVehicle.mutate(id);
   };
 
   const handleViewHistory = (vehicle: Vehicle) => {
     setHistoryVehicle(vehicle);
   };
 
+  // Show loading while checking auth
+  if (status === 'loading' || status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      {/* Migration Banner */}
+      {showMigrationBanner && (
+        <div className="bg-blue-50 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 text-sm text-blue-800 dark:text-blue-300">
+              <Upload className="w-5 h-5 flex-shrink-0" />
+              <span>
+                Se encontraron <strong>{localVehicles.length}</strong> vehículos en datos locales. ¿Querés migrarlos a tu cuenta?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleDismissMigration}
+                className="px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                No, gracias
+              </button>
+              <button
+                onClick={handleMigrate}
+                disabled={migrateVehicles.isPending}
+                className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+              >
+                {migrateVehicles.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+                Migrar datos
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">AutoFocus</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 transition-colors">Análisis de Mercado Automotor</p>
+            <div className="flex items-center gap-3">
+              <Logo size={36} className="text-blue-600 dark:text-blue-400" />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white transition-colors">Motorlytics</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 transition-colors">Análisis de Mercado Automotor</p>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <DarkModeToggle />
+              <UserMenu />
               <div className="relative add-menu-container">
                 <button
                   onClick={() => setShowAddMenu(!showAddMenu)}
@@ -223,8 +320,17 @@ export default function Home() {
 
         <div className="mb-4">
           <div className="text-sm text-gray-600 dark:text-gray-400 transition-colors">
-            Mostrando <span className="font-semibold text-gray-900 dark:text-white transition-colors">{sortedVehicles.length}</span> de{' '}
-            <span className="font-semibold text-gray-900 dark:text-white transition-colors">{vehicles.length}</span> vehículos
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Cargando vehículos...
+              </span>
+            ) : (
+              <>
+                Mostrando <span className="font-semibold text-gray-900 dark:text-white transition-colors">{sortedVehicles.length}</span> de{' '}
+                <span className="font-semibold text-gray-900 dark:text-white transition-colors">{vehicles.length}</span> vehículos
+              </>
+            )}
           </div>
         </div>
 

@@ -1,4 +1,4 @@
-# AutoFocus - Dashboard de Análisis del Mercado Automotor
+# Motorlytics - Dashboard de Análisis del Mercado Automotor
 
 Sistema web para análisis del mercado automotor con vista tabular, filtros avanzados, **integración con MercadoLibre**, edición manual de registros y persistencia de histórico de precios.
 
@@ -116,7 +116,7 @@ Click en **"Agregar Vehículo"** y selecciona una opción:
 ## 📁 Estructura del Proyecto
 
 ```
-autofocus/
+motorlytics/
 ├── app/
 │   ├── globals.css                 # Estilos globales + modo oscuro
 │   ├── layout.tsx                  # Layout principal

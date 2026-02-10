@@ -4,7 +4,12 @@
       "Bash(node scripts/populate-vehicles.js:*)",
       "Bash(npm run dev:*)",
       "Bash(curl:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(npx prisma init:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma db push:*)"
     ]
   }
 }
